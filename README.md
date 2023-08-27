@@ -28,6 +28,10 @@ For the Seeed Studio XIAO nRF52840 Sense, `west flash` will only work when conne
 
 Without the expansion board, you can manually upload the UF2 file by double pressing the reset button on the board, which will make the device discoverable as a drive on the computer. Copy and paste the `zephyr.uf2` file found in `build/zephyr` to the drive and delete `CURRENT.uf2`.
 
-### Building and running for the reciever
+### Running the reciever
 
-Run `python pickle_client.py` will connect to the device and print all accelerometer data to the terminal.
+Run the following:
+```shell
+python pickle_client.py
+```
+This script connects to the device and print all accelerometer data to the terminal.
