@@ -45,91 +45,182 @@ static struct bt_uuid_128 read_gyroY_uuid = BT_UUID_INIT_128(
 static struct bt_uuid_128 read_gyroZ_uuid = BT_UUID_INIT_128(
 	BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef6));
 
+static struct bt_uuid_128 read_timestamp_uuid = BT_UUID_INIT_128(
+	BT_UUID_128_ENCODE(0x12345678, 0x1234, 0x5678, 0x1234, 0x56789abcdef7));
+
+// most recent sensor readings
 static float accelX, accelY, accelZ;
 static float gyroX, gyroY, gyroZ;
+
+// buffer of 5 readings to be sent in a BLE Notification payload
+static float accelX_buffer[5], accelY_buffer[5], accelZ_buffer[5];
+static float gyroX_buffer[5], gyroY_buffer[5], gyroZ_buffer[5];
+static uint32_t timestamp_buffer[5];
+
+// boolean that is set in notification callback after notification is sent
+static bool accelX_notified, accelY_notified, accelZ_notified;
+static bool gyroX_notified, gyroY_notified, gyroZ_notified;
+static bool timestamp_notified;
+
 static struct bt_le_adv_param adv_param;
 
 static ssize_t read_accelX(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &accelX;
+	float values[5];
+	memcpy(values, &accelX_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(accelX));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
 }
 
 static ssize_t read_accelY(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &accelY;
+	float values[5];
+	memcpy(values, &accelY_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(accelY));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
 }
 
 static ssize_t read_accelZ(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &accelZ;
+	float values[5];
+	memcpy(values, &accelZ_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(accelZ));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
 }
 
 static ssize_t read_gyroX(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &gyroX;
+	float values[5];
+	memcpy(values, &gyroX_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(gyroX));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
 }
 
 static ssize_t read_gyroY(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &gyroY;
+	float values[5];
+	memcpy(values, &gyroY_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(gyroY));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
 }
 
 static ssize_t read_gyroZ(struct bt_conn *conn, const struct bt_gatt_attr *attr,
 			   void *buf, uint16_t len, uint16_t offset)
 {
-	float *value = &gyroZ;
+	float values[5];
+	memcpy(values, &gyroZ_buffer, sizeof(float) * 5);
 
-	return bt_gatt_attr_read(conn, attr, buf, len, offset, value,
-				 sizeof(gyroZ));
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(float)*5);
+}
+
+static ssize_t read_timestamp(struct bt_conn *conn, const struct bt_gatt_attr *attr,
+			   void *buf, uint16_t len, uint16_t offset)
+{
+	float values[5];
+	memcpy(values, &timestamp_buffer, sizeof(uint32_t) * 5);
+
+	return bt_gatt_attr_read(conn, attr, buf, len, offset, values,
+				 sizeof(uint32_t)*5);
+}
+
+static void accelX_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	accelX_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void accelY_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	accelY_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void accelZ_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	accelZ_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void gyroX_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	gyroX_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void gyroY_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	gyroY_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void gyroZ_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	gyroZ_notified = value == BT_GATT_CCC_NOTIFY;
+}
+
+static void timestamp_changed(const struct bt_gatt_attr *attr,
+				 uint16_t value)
+{
+	timestamp_notified = value == BT_GATT_CCC_NOTIFY;
 }
 
 /* Vendor Primary Service Declaration */
 BT_GATT_SERVICE_DEFINE(primary_service,
 	BT_GATT_PRIMARY_SERVICE(&primary_service_uuid),
 	BT_GATT_CHARACTERISTIC(&read_accelX_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_accelX, NULL, NULL),
+	BT_GATT_CCC(accelX_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&read_accelY_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_accelY, NULL, NULL),
+	BT_GATT_CCC(accelY_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&read_accelZ_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_accelZ, NULL, NULL),
+	BT_GATT_CCC(accelZ_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&read_gyroX_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_gyroX, NULL, NULL),
+	BT_GATT_CCC(gyroX_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&read_gyroY_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_gyroY, NULL, NULL),
+	BT_GATT_CCC(gyroY_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 	BT_GATT_CHARACTERISTIC(&read_gyroZ_uuid.uuid,
-			       BT_GATT_CHRC_READ,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
 			       BT_GATT_PERM_READ,
 			       read_gyroZ, NULL, NULL),
+	BT_GATT_CCC(gyroZ_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
+	BT_GATT_CHARACTERISTIC(&read_timestamp_uuid.uuid,
+			       BT_GATT_CHRC_READ | BT_GATT_CHRC_NOTIFY,
+			       BT_GATT_PERM_READ,
+			       read_timestamp, NULL, NULL),
+	BT_GATT_CCC(timestamp_changed,
+		    BT_GATT_PERM_READ | BT_GATT_PERM_WRITE),
 );
 
 static const struct bt_data ad[] = {
@@ -209,18 +300,26 @@ static void lsm6dsl_trigger_handler(const struct device *dev,
 	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Y, &gyro_y);
 	sensor_channel_get(dev, SENSOR_CHAN_GYRO_Z, &gyro_z);
 
-	if (print_samples) {
-		print_samples = 0;
+	accel_x_out = accel_x;
+	accel_y_out = accel_y;
+	accel_z_out = accel_z;
 
-		accel_x_out = accel_x;
-		accel_y_out = accel_y;
-		accel_z_out = accel_z;
+	gyro_x_out = gyro_x;
+	gyro_y_out = gyro_y;
+	gyro_z_out = gyro_z;
 
-		gyro_x_out = gyro_x;
-		gyro_y_out = gyro_y;
-		gyro_z_out = gyro_z;
+	// if (print_samples) {
+	// 	print_samples = 0;
 
-	}
+	// 	accel_x_out = accel_x;
+	// 	accel_y_out = accel_y;
+	// 	accel_z_out = accel_z;
+
+	// 	gyro_x_out = gyro_x;
+	// 	gyro_y_out = gyro_y;
+	// 	gyro_z_out = gyro_z;
+
+	// }
 
 }
 
@@ -278,16 +377,40 @@ int main(void)
 	}
 
 	while (1) {
-		// signed_value++;
-		// k_sleep(K_SECONDS(1));
-		accelX = out_ev(&accel_x_out);
-		accelY = out_ev(&accel_y_out);
-		accelZ = out_ev(&accel_z_out);
 
-		gyroX = out_ev(&gyro_x_out);
-		gyroY = out_ev(&gyro_y_out);
-		gyroZ = out_ev(&gyro_z_out);
-#define CONSOLE_PRINT
+		memset(timestamp_buffer, 0, sizeof(float) * 5);
+
+		for (int i = 0; i < 5; i++) {
+			accelX = out_ev(&accel_x_out);
+			accelY = out_ev(&accel_y_out);
+			accelZ = out_ev(&accel_z_out);
+
+			gyroX = out_ev(&gyro_x_out);
+			gyroY = out_ev(&gyro_y_out);
+			gyroZ = out_ev(&gyro_z_out);
+
+			accelX_buffer[i] = accelX;
+			accelY_buffer[i] = accelY;
+			accelZ_buffer[i] = accelZ;
+
+			gyroX_buffer[i] = gyroX;
+			gyroY_buffer[i] = gyroY;
+			gyroZ_buffer[i] = gyroZ;
+
+			timestamp_buffer[i] = k_uptime_get_32();
+		}
+
+		bt_gatt_notify(NULL, &primary_service.attrs[2], &accelX_buffer, sizeof(float)*5);
+		bt_gatt_notify(NULL, &primary_service.attrs[5], &accelX_buffer, sizeof(float)*5);
+		bt_gatt_notify(NULL, &primary_service.attrs[8], &accelX_buffer, sizeof(float)*5);
+
+		bt_gatt_notify(NULL, &primary_service.attrs[11], &accelX_buffer, sizeof(float)*5);
+		bt_gatt_notify(NULL, &primary_service.attrs[14], &accelX_buffer, sizeof(float)*5);
+		bt_gatt_notify(NULL, &primary_service.attrs[17], &accelX_buffer, sizeof(float)*5);
+
+		bt_gatt_notify(NULL, &primary_service.attrs[20], &accelX_buffer, sizeof(float)*5);
+
+// #define CONSOLE_PRINT
 #if defined(CONSOLE_PRINT)
 		printk("\0033\014");
 		printf("LSM6DSL sensor samples:\n\n");
