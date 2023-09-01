@@ -376,39 +376,31 @@ int main(void)
 		return 0;
 	}
 
+	uint32_t timestamp;
+
 	while (1) {
 
-		memset(timestamp_buffer, 0, sizeof(float) * 5);
+		accelX = out_ev(&accel_x_out);
+		accelY = out_ev(&accel_y_out);
+		accelZ = out_ev(&accel_z_out);
 
-		for (int i = 0; i < 5; i++) {
-			accelX = out_ev(&accel_x_out);
-			accelY = out_ev(&accel_y_out);
-			accelZ = out_ev(&accel_z_out);
+		gyroX = out_ev(&gyro_x_out);
+		gyroY = out_ev(&gyro_y_out);
+		gyroZ = out_ev(&gyro_z_out);
 
-			gyroX = out_ev(&gyro_x_out);
-			gyroY = out_ev(&gyro_y_out);
-			gyroZ = out_ev(&gyro_z_out);
+		timestamp = k_uptime_get_32();
 
-			accelX_buffer[i] = accelX;
-			accelY_buffer[i] = accelY;
-			accelZ_buffer[i] = accelZ;
+		bt_gatt_notify(NULL, &primary_service.attrs[2], &accelX, sizeof(float));
+		bt_gatt_notify(NULL, &primary_service.attrs[5], &accelY, sizeof(float));
+		bt_gatt_notify(NULL, &primary_service.attrs[8], &accelZ, sizeof(float));
 
-			gyroX_buffer[i] = gyroX;
-			gyroY_buffer[i] = gyroY;
-			gyroZ_buffer[i] = gyroZ;
+		bt_gatt_notify(NULL, &primary_service.attrs[11], &gyroX, sizeof(float));
+		bt_gatt_notify(NULL, &primary_service.attrs[14], &gyroY, sizeof(float));
+		bt_gatt_notify(NULL, &primary_service.attrs[17], &gyroZ, sizeof(float));
 
-			timestamp_buffer[i] = k_uptime_get_32();
-		}
+		bt_gatt_notify(NULL, &primary_service.attrs[20], &timestamp, sizeof(uint32_t));
 
-		bt_gatt_notify(NULL, &primary_service.attrs[2], &accelX_buffer, sizeof(float)*5);
-		bt_gatt_notify(NULL, &primary_service.attrs[5], &accelX_buffer, sizeof(float)*5);
-		bt_gatt_notify(NULL, &primary_service.attrs[8], &accelX_buffer, sizeof(float)*5);
-
-		bt_gatt_notify(NULL, &primary_service.attrs[11], &accelX_buffer, sizeof(float)*5);
-		bt_gatt_notify(NULL, &primary_service.attrs[14], &accelX_buffer, sizeof(float)*5);
-		bt_gatt_notify(NULL, &primary_service.attrs[17], &accelX_buffer, sizeof(float)*5);
-
-		bt_gatt_notify(NULL, &primary_service.attrs[20], &accelX_buffer, sizeof(float)*5);
+		k_sleep(K_MSEC(50));
 
 // #define CONSOLE_PRINT
 #if defined(CONSOLE_PRINT)

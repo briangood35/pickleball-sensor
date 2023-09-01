@@ -2,27 +2,38 @@ import asyncio
 from bleak import BleakScanner, BleakClient
 import struct
 import PyObjCTools
+import os
+import sys
+
+def generic_notif_handler(data, type_str):
+    if type_str == "accelX":
+        os.system('clear')
+        sys.stdout.flush()
+    type_str += ": "
+    print(type_str + str(struct.unpack('<f', data)))
+    print()
 
 def handleAccelX(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "accelX")
 
 def handleAccelY(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "accelY")
 
 def handleAccelZ(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "accelZ")
 
 def handleGyroX(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "gyroX")
 
 def handleGyroY(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "gyroY")
 
 def handleGyroZ(sender, data):
-    print(f"accelX: {struct.unpack('<f', data)}")
+    generic_notif_handler(data, "gyroZ")
 
 def handleTimestamp(sender, data):
-    print(f"accelX: {struct.unpack('<I', data)}")
+    print("timestamp: " + str(struct.unpack('<I', data)[0]))
+    print()
 
 async def main():
     devices = await BleakScanner.discover()
@@ -32,27 +43,15 @@ async def main():
             address = str(PyObjCTools.KeyValueCoding.getKey(d.details,'identifier')[0])
 
     async with BleakClient(address) as client:
-        await client.write_gatt_descriptor()
-        client.start_notify("12345678-1234-5678-1234-56789abcdef1", handleAccelX)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef2", handleAccelY)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef3", handleAccelZ)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef4", handleGyroX)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef5", handleGyroY)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef6", handleGyroZ)
-        client.start_notify("12345678-1234-5678-1234-56789abcdef7", handleTimestamp)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef1", handleAccelX)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef2", handleAccelY)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef3", handleAccelZ)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef4", handleGyroX)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef5", handleGyroY)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef6", handleGyroZ)
+        await client.start_notify("12345678-1234-5678-1234-56789abcdef7", handleTimestamp)
         while True:
-            accelX = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef1")
-            accelY = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef2")
-            accelZ = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef3")
-            gyroX = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef4")
-            gyroY = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef5")
-            gyroZ = await client.read_gatt_char("12345678-1234-5678-1234-56789abcdef6")
-            print(f"accelX: {struct.unpack('<f', accelX)}")
-            print(f"accelY: {struct.unpack('<f', accelY)}")
-            print(f"accelZ: {struct.unpack('<f', accelZ)}")
-            print(f"gyroX: {struct.unpack('<f', gyroX)}")
-            print(f"gyroY: {struct.unpack('<f', gyroY)}")
-            print(f"gyroZ: {struct.unpack('<f', gyroZ)}")
+            continue
 
 
 asyncio.run(main())
